@@ -1,20 +1,29 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from "react-native";
 
+import {
+  obtenerDatosInicialesInforme,
+  obtenerLearningLogs,
+  guardarLearningLogs,
+  eliminarLearningLog,
+} from "@/services/informeAprendizajeService";
+
 type Semana = {
+  id?: number;
   semana: string;
   fecha: string;
   puestoAprendizaje: string;
   actividadesRealizadas: string;
   actividadesAutonomas: string;
+  observaciones: string;
 };
 
 export default function InformeAprendizajeScreen() {
@@ -23,13 +32,12 @@ export default function InformeAprendizajeScreen() {
     version: "1.0",
     elaboracion: "06-06-2023",
     actualizacion: "06-06-2023",
-
-    institucion: "INSTITUTO SUPERIOR TECNOLÓGICO DE TURISMO Y PATRIMONIO YAVIRAC",
+    institucion:
+      "INSTITUTO SUPERIOR TECNOLÓGICO DE TURISMO Y PATRIMONIO YAVIRAC",
     macroproceso: "MACROPROCESO 01 DOCENCIA",
     proceso:
       "PROCESO 02 PROCESO DE FORMACIÓN PRÁCTICA EN EL ENTORNO LABORAL REAL - FORMACIÓN DUAL",
     formato: "FORMATO 06 BITÁCORA DE APRENDIZAJE DE FASE PRÁCTICA",
-
     empresaFormadora: "",
     nivel: "",
     estudiante: "",
@@ -38,7 +46,7 @@ export default function InformeAprendizajeScreen() {
     fechaInicio: "",
     fechaFin: "",
     tutorAcademico: "",
-    nucleoEstructurante: "",
+    nucleoEstructurante: "DESARROLLO WEB FRONT END",
     tutorEmpresarial: "",
     carrera: "",
     objetivo: "",
@@ -53,8 +61,42 @@ export default function InformeAprendizajeScreen() {
       puestoAprendizaje: "",
       actividadesRealizadas: "",
       actividadesAutonomas: "",
+      observaciones: "",
     },
   ]);
+
+  useEffect(() => {
+    cargarFormulario();
+  }, []);
+
+  const cargarFormulario = async () => {
+    try {
+      const data = await obtenerDatosInicialesInforme();
+
+      setForm((prev) => ({
+        ...prev,
+        empresaFormadora: data.empresaFormadora || "",
+        estudiante: data.estudiante || "",
+        cedula: data.cedula || "",
+        tutorAcademico: data.tutorAcademico || "",
+        tutorEmpresarial: data.tutorEmpresarial || "",
+        carrera: data.carrera || "",
+        cicloAcademico: data.cicloAcademico || "",
+        objetivo: data.objetivo || "",
+        fechaInicio: data.fechaInicio ? data.fechaInicio.substring(0, 10) : "",
+        fechaFin: data.fechaFin ? data.fechaFin.substring(0, 10) : "",
+      }));
+
+      const logs = await obtenerLearningLogs();
+
+      if (logs.length > 0) {
+        setSemanas(logs);
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "No se pudieron cargar los datos del formulario");
+    }
+  };
 
   const setValue = (field: string, value: string) => {
     setForm({
@@ -69,7 +111,7 @@ export default function InformeAprendizajeScreen() {
     value: string
   ) => {
     const nuevasSemanas = [...semanas];
-    nuevasSemanas[index][field] = value;
+    nuevasSemanas[index][field] = value as never;
     setSemanas(nuevasSemanas);
   };
 
@@ -82,26 +124,44 @@ export default function InformeAprendizajeScreen() {
         puestoAprendizaje: "",
         actividadesRealizadas: "",
         actividadesAutonomas: "",
+        observaciones: "",
       },
     ]);
   };
 
-  const guardarFormulario = () => {
-    if (!form.empresaFormadora || !form.estudiante || !form.cedula) {
-      Alert.alert(
-        "Campos obligatorios",
-        "Debe ingresar empresa formadora, estudiante y cédula."
-      );
-      return;
+  const guardarFormulario = async () => {
+    try {
+      const data = {
+        internshipId: 2,
+        semanas,
+      };
+
+      const response = await guardarLearningLogs(data);
+
+      Alert.alert("Correcto", response.message);
+      await cargarFormulario();
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "No se pudo guardar el cronograma");
     }
+  };
 
-    const data = {
-      ...form,
-      semanas,
-    };
+  const eliminarSemana = async (index: number) => {
+    const semana = semanas[index];
 
-    console.log("Formulario:", data);
-    Alert.alert("Correcto", "Formulario registrado correctamente.");
+    try {
+      if (semana.id) {
+        await eliminarLearningLog(semana.id);
+      }
+
+      const nuevasSemanas = semanas.filter((_, i) => i !== index);
+      setSemanas(nuevasSemanas);
+
+      Alert.alert("Correcto", "Semana eliminada correctamente");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "No se pudo eliminar la semana");
+    }
   };
 
   return (
@@ -121,116 +181,74 @@ export default function InformeAprendizajeScreen() {
             </View>
 
             <View style={styles.versionBox}>
-              <View style={styles.versionRow}>
-                <Text style={styles.versionLabel}>VERSIÓN</Text>
-                <Text style={styles.versionValue}>{form.version}</Text>
-              </View>
-              <View style={styles.versionRow}>
-                <Text style={styles.versionLabel}>ELABORACIÓN</Text>
-                <Text style={styles.versionValue}>{form.elaboracion}</Text>
-              </View>
-              <View style={styles.versionRow}>
-                <Text style={styles.versionLabel}>ACTUALIZACIÓN</Text>
-                <Text style={styles.versionValue}>{form.actualizacion}</Text>
-              </View>
-              <View style={styles.versionRow}>
-                <Text style={styles.versionLabel}>CÓDIGO</Text>
-                <Text style={styles.versionValue}>{form.codigo}</Text>
-              </View>
+              <Text style={styles.versionText}>VERSIÓN: {form.version}</Text>
+              <Text style={styles.versionText}>
+                ELABORACIÓN: {form.elaboracion}
+              </Text>
+              <Text style={styles.versionText}>
+                ACTUALIZACIÓN: {form.actualizacion}
+              </Text>
+              <Text style={styles.versionText}>CÓDIGO: {form.codigo}</Text>
             </View>
           </View>
 
           <View style={styles.infoGrid}>
-            <View style={styles.infoRow}>
-              <Label text="EMPRESA FORMADORA:" />
-              <Input
-                value={form.empresaFormadora}
-                onChangeText={(text) => setValue("empresaFormadora", text)}
-              />
-              <Label text="NIVEL:" />
-              <Input
-                value={form.nivel}
-                onChangeText={(text) => setValue("nivel", text)}
-              />
-            </View>
+            <Row
+              label1="EMPRESA FORMADORA:"
+              value1={form.empresaFormadora}
+              onChange1={(t) => setValue("empresaFormadora", t)}
+              label2="NIVEL:"
+              value2={form.nivel}
+              onChange2={(t) => setValue("nivel", t)}
+            />
 
-            <View style={styles.infoRow}>
-              <Label text="ESTUDIANTE:" />
-              <Input
-                value={form.estudiante}
-                onChangeText={(text) => setValue("estudiante", text)}
-              />
-              <Label text="CICLO ACADÉMICO:" />
-              <Input
-                value={form.cicloAcademico}
-                onChangeText={(text) => setValue("cicloAcademico", text)}
-              />
-            </View>
+            <Row
+              label1="ESTUDIANTE:"
+              value1={form.estudiante}
+              onChange1={(t) => setValue("estudiante", t)}
+              label2="CICLO ACADÉMICO:"
+              value2={form.cicloAcademico}
+              onChange2={(t) => setValue("cicloAcademico", t)}
+            />
 
-            <View style={styles.infoRow}>
-              <Label text="CÉDULA:" />
-              <Input
-                value={form.cedula}
-                onChangeText={(text) => setValue("cedula", text)}
-              />
-              <Label text="F. INICIO FASE PRÁCTICA" />
-              <Input
-                value={form.fechaInicio}
-                onChangeText={(text) => setValue("fechaInicio", text)}
-              />
-              <Label text="F. FIN FASE PRÁCTICA" />
-              <Input
-                value={form.fechaFin}
-                onChangeText={(text) => setValue("fechaFin", text)}
-              />
-            </View>
+            <Row
+              label1="CÉDULA:"
+              value1={form.cedula}
+              onChange1={(t) => setValue("cedula", t)}
+              label2="F. INICIO / F. FIN:"
+              value2={`${form.fechaInicio} / ${form.fechaFin}`}
+              onChange2={() => {}}
+            />
 
-            <View style={styles.infoRow}>
-              <Label text="TUTOR(A) ACADÉMICO" />
-              <Input
-                value={form.tutorAcademico}
-                onChangeText={(text) => setValue("tutorAcademico", text)}
-              />
-              <Label text="NÚCLEO ESTRUCTURANTE:" />
-              <Input
-                value={form.nucleoEstructurante}
-                onChangeText={(text) => setValue("nucleoEstructurante", text)}
-              />
-            </View>
+            <Row
+              label1="TUTOR(A) ACADÉMICO:"
+              value1={form.tutorAcademico}
+              onChange1={(t) => setValue("tutorAcademico", t)}
+              label2="NÚCLEO ESTRUCTURANTE:"
+              value2={form.nucleoEstructurante}
+              onChange2={(t) => setValue("nucleoEstructurante", t)}
+            />
 
-            <View style={styles.infoRow}>
-              <Label text="TUTOR(A) EMPRESARIAL" />
-              <Input
-                value={form.tutorEmpresarial}
-                onChangeText={(text) => setValue("tutorEmpresarial", text)}
-              />
-              <Label text="CARRERA" />
-              <Input
-                value={form.carrera}
-                onChangeText={(text) => setValue("carrera", text)}
-              />
-            </View>
+            <Row
+              label1="TUTOR(A) EMPRESARIAL:"
+              value1={form.tutorEmpresarial}
+              onChange1={(t) => setValue("tutorEmpresarial", t)}
+              label2="CARRERA:"
+              value2={form.carrera}
+              onChange2={(t) => setValue("carrera", t)}
+            />
           </View>
 
-          <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>
-              OBJETIVO DEL NÚCLEO ESTRUCTURANTE PARA LA FASE PRÁCTICA
-            </Text>
-          </View>
+          <Section title="OBJETIVO DEL NÚCLEO ESTRUCTURANTE PARA LA FASE PRÁCTICA" />
 
           <TextInput
             style={styles.objectiveInput}
             multiline
             value={form.objetivo}
             onChangeText={(text) => setValue("objetivo", text)}
-            placeholder="Ingrese el objetivo de la fase práctica"
           />
 
-          <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>
-              INFORME DE APRENDIZAJE DE LA FASE PRÁCTICA
-            </Text>
-          </View>
+          <Section title="INFORME DE APRENDIZAJE DE LA FASE PRÁCTICA" />
 
           <View style={styles.table}>
             <View style={styles.tableHeader}>
@@ -245,6 +263,10 @@ export default function InformeAprendizajeScreen() {
               <Text style={[styles.th, styles.colActividad]}>
                 ACTIVIDADES AUTÓNOMAS
               </Text>
+              <Text style={[styles.th, styles.colObservacion]}>
+                OBSERVACIONES
+              </Text>
+              <Text style={[styles.th, styles.colAcciones]}>ACCIONES</Text>
             </View>
 
             {semanas.map((item, index) => (
@@ -256,14 +278,14 @@ export default function InformeAprendizajeScreen() {
                     setSemanaValue(index, "semana", text)
                   }
                 />
+
                 <TextInput
                   style={[styles.tdInput, styles.colFecha]}
                   value={item.fecha}
-                  onChangeText={(text) =>
-                    setSemanaValue(index, "fecha", text)
-                  }
-                  placeholder="dd/mm/aaaa"
+                  onChangeText={(text) => setSemanaValue(index, "fecha", text)}
+                  placeholder="aaaa-mm-dd"
                 />
+
                 <TextInput
                   style={[styles.tdInput, styles.colPuesto]}
                   value={item.puestoAprendizaje}
@@ -271,6 +293,7 @@ export default function InformeAprendizajeScreen() {
                     setSemanaValue(index, "puestoAprendizaje", text)
                   }
                 />
+
                 <TextInput
                   style={[styles.tdInput, styles.colActividad]}
                   value={item.actividadesRealizadas}
@@ -279,6 +302,7 @@ export default function InformeAprendizajeScreen() {
                   }
                   multiline
                 />
+
                 <TextInput
                   style={[styles.tdInput, styles.colActividad]}
                   value={item.actividadesAutonomas}
@@ -287,6 +311,24 @@ export default function InformeAprendizajeScreen() {
                   }
                   multiline
                 />
+
+                <TextInput
+                  style={[styles.tdInput, styles.colObservacion]}
+                  value={item.observaciones}
+                  onChangeText={(text) =>
+                    setSemanaValue(index, "observaciones", text)
+                  }
+                  multiline
+                />
+
+                <View style={[styles.actionCell, styles.colAcciones]}>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => eliminarSemana(index)}
+                  >
+                    <Text style={styles.buttonText}>Eliminar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -299,28 +341,28 @@ export default function InformeAprendizajeScreen() {
             <View style={styles.footerLabel}>
               <Text style={styles.footerLabelText}>
                 Reflexión sobre el aprendizaje alcanzado de las actividades
-                realizadas en la empresa formadora
+                realizadas
               </Text>
             </View>
+
             <TextInput
               style={styles.footerInput}
               multiline
               value={form.reflexion}
               onChangeText={(text) => setValue("reflexion", text)}
-              placeholder="Ingrese la reflexión del aprendizaje alcanzado"
             />
+
             <View style={styles.footerLabel}>
               <Text style={styles.footerLabelText}>
-                Observaciones de la empresa formadora sobre el desempeño del
-                estudiante:
+                Observaciones de la empresa formadora
               </Text>
             </View>
+
             <TextInput
               style={styles.footerInput}
               multiline
               value={form.observaciones}
               onChangeText={(text) => setValue("observaciones", text)}
-              placeholder="Ingrese observaciones"
             />
           </View>
 
@@ -333,39 +375,56 @@ export default function InformeAprendizajeScreen() {
   );
 }
 
-function Label({ text }: { text: string }) {
+function Row(props: {
+  label1: string;
+  value1: string;
+  onChange1: (text: string) => void;
+  label2: string;
+  value2: string;
+  onChange2: (text: string) => void;
+}) {
   return (
-    <View style={styles.labelCell}>
-      <Text style={styles.labelText}>{text}</Text>
+    <View style={styles.infoRow}>
+      <View style={styles.labelCell}>
+        <Text style={styles.labelText}>{props.label1}</Text>
+      </View>
+
+      <TextInput
+        style={styles.inputCell}
+        value={props.value1}
+        onChangeText={props.onChange1}
+      />
+
+      <View style={styles.labelCell}>
+        <Text style={styles.labelText}>{props.label2}</Text>
+      </View>
+
+      <TextInput
+        style={styles.inputCell}
+        value={props.value2}
+        onChangeText={props.onChange2}
+      />
     </View>
   );
 }
 
-function Input({
-  value,
-  onChangeText,
-}: {
-  value: string;
-  onChangeText: (text: string) => void;
-}) {
+function Section({ title }: { title: string }) {
   return (
-    <TextInput
-      style={styles.inputCell}
-      value={value}
-      onChangeText={onChangeText}
-    />
+    <View style={styles.sectionTitle}>
+      <Text style={styles.sectionTitleText}>{title}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
   },
   page: {
-    width: 1200,
+    width: 1700,
     padding: 10,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
   },
   headerContainer: {
     flexDirection: "row",
@@ -389,58 +448,38 @@ const styles = StyleSheet.create({
   },
   headerBlue: {
     backgroundColor: "#2454ff",
-    color: "#000",
     fontWeight: "bold",
     textAlign: "center",
     fontSize: 11,
     paddingVertical: 3,
     borderBottomWidth: 1,
-    borderColor: "#000",
   },
   headerWhite: {
     backgroundColor: "#fff",
-    color: "#000",
     fontWeight: "bold",
     textAlign: "center",
     fontSize: 10,
     paddingVertical: 3,
     borderBottomWidth: 1,
-    borderColor: "#000",
   },
   headerOrange: {
     backgroundColor: "#ff7a00",
-    color: "#000",
     fontWeight: "bold",
     textAlign: "center",
     fontSize: 10,
     paddingVertical: 3,
     borderBottomWidth: 1,
-    borderColor: "#000",
   },
   versionBox: {
-    width: 140,
+    width: 180,
     borderLeftWidth: 1,
     borderColor: "#000",
+    justifyContent: "center",
   },
-  versionRow: {
-    flexDirection: "row",
+  versionText: {
+    fontSize: 9,
+    padding: 4,
     borderBottomWidth: 1,
-    borderColor: "#000",
-    minHeight: 21,
-  },
-  versionLabel: {
-    width: 75,
-    fontSize: 8,
-    fontWeight: "bold",
-    padding: 3,
-    borderRightWidth: 1,
-    borderColor: "#000",
-  },
-  versionValue: {
-    flex: 1,
-    fontSize: 8,
-    textAlign: "center",
-    padding: 3,
   },
   infoGrid: {
     marginTop: 8,
@@ -453,7 +492,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   labelCell: {
-    width: 150,
+    width: 170,
     backgroundColor: "#d9d9d9",
     borderRightWidth: 1,
     borderBottomWidth: 1,
@@ -466,7 +505,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   inputCell: {
-    width: 260,
+    width: 400,
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#000",
@@ -535,7 +574,21 @@ const styles = StyleSheet.create({
     width: 180,
   },
   colActividad: {
-    width: 380,
+    width: 350,
+  },
+  colObservacion: {
+    width: 220,
+  },
+  colAcciones: {
+    width: 130,
+  },
+  actionCell: {
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 5,
   },
   addButton: {
     backgroundColor: "#0f75bc",
@@ -543,6 +596,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     width: 180,
     borderRadius: 6,
+  },
+  deleteButton: {
+    backgroundColor: "#b00020",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 5,
   },
   saveButton: {
     backgroundColor: "#1f7a1f",
@@ -581,7 +640,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   footerInput: {
-    width: 330,
+    width: 420,
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#000",
