@@ -10,7 +10,6 @@ import {
 } from "react-native";
 
 import {
-  obtenerDatosInicialesInforme,
   obtenerLearningLogs,
   guardarLearningLogs,
   eliminarLearningLog,
@@ -27,7 +26,7 @@ type Semana = {
 };
 
 export default function InformeAprendizajeScreen() {
-  const [form, setForm] = useState({
+  const form = {
     codigo: "DS-010206",
     version: "1.0",
     elaboracion: "06-06-2023",
@@ -38,21 +37,23 @@ export default function InformeAprendizajeScreen() {
     proceso:
       "PROCESO 02 PROCESO DE FORMACIÓN PRÁCTICA EN EL ENTORNO LABORAL REAL - FORMACIÓN DUAL",
     formato: "FORMATO 06 BITÁCORA DE APRENDIZAJE DE FASE PRÁCTICA",
-    empresaFormadora: "",
-    nivel: "",
-    estudiante: "",
-    cicloAcademico: "",
-    cedula: "",
-    fechaInicio: "",
-    fechaFin: "",
-    tutorAcademico: "",
+    empresaFormadora: "TOC SYSTEMS",
+    nivel: "TERCERO",
+    estudiante: "PÉREZ ANGULO DANIEL ROBERTO",
+    cicloAcademico: "2025-I",
+    cedula: "1718599812",
+    fechaInicio: "2025-06-09",
+    fechaFin: "2025-08-01",
+    tutorAcademico: "Msc. Hernan Mejia",
     nucleoEstructurante: "DESARROLLO WEB FRONT END",
-    tutorEmpresarial: "",
-    carrera: "",
-    objetivo: "",
-    reflexion: "",
-    observaciones: "",
-  });
+    tutorEmpresarial: "Ing. Alberto Sánchez",
+    carrera: "DESARROLLO DE SOFTWARE",
+    objetivo:
+      "Desarrollar aplicaciones complejas aplicando el paradigma de la programación orientada a objetos.",
+  };
+
+  const [reflexion, setReflexion] = useState("");
+  const [observaciones, setObservaciones] = useState("");
 
   const [semanas, setSemanas] = useState<Semana[]>([
     {
@@ -66,27 +67,11 @@ export default function InformeAprendizajeScreen() {
   ]);
 
   useEffect(() => {
-    cargarFormulario();
+    cargarSemanas();
   }, []);
 
-  const cargarFormulario = async () => {
+  const cargarSemanas = async () => {
     try {
-      const data = await obtenerDatosInicialesInforme();
-
-      setForm((prev) => ({
-        ...prev,
-        empresaFormadora: data.empresaFormadora || "",
-        estudiante: data.estudiante || "",
-        cedula: data.cedula || "",
-        tutorAcademico: data.tutorAcademico || "",
-        tutorEmpresarial: data.tutorEmpresarial || "",
-        carrera: data.carrera || "",
-        cicloAcademico: data.cicloAcademico || "",
-        objetivo: data.objetivo || "",
-        fechaInicio: data.fechaInicio ? data.fechaInicio.substring(0, 10) : "",
-        fechaFin: data.fechaFin ? data.fechaFin.substring(0, 10) : "",
-      }));
-
       const logs = await obtenerLearningLogs();
 
       if (logs.length > 0) {
@@ -94,15 +79,8 @@ export default function InformeAprendizajeScreen() {
       }
     } catch (error) {
       console.log(error);
-      Alert.alert("Error", "No se pudieron cargar los datos del formulario");
+      Alert.alert("Error", "No se pudieron cargar las semanas guardadas");
     }
-  };
-
-  const setValue = (field: string, value: string) => {
-    setForm({
-      ...form,
-      [field]: value,
-    });
   };
 
   const setSemanaValue = (
@@ -134,15 +112,17 @@ export default function InformeAprendizajeScreen() {
       const data = {
         internshipId: 2,
         semanas,
+        reflexion,
+        observaciones,
       };
 
       const response = await guardarLearningLogs(data);
 
       Alert.alert("Correcto", response.message);
-      await cargarFormulario();
+      await cargarSemanas();
     } catch (error) {
       console.log(error);
-      Alert.alert("Error", "No se pudo guardar el cronograma");
+      Alert.alert("Error", "No se pudo guardar el formulario");
     }
   };
 
@@ -193,60 +173,47 @@ export default function InformeAprendizajeScreen() {
           </View>
 
           <View style={styles.infoGrid}>
-            <Row
+            <StaticRow
               label1="EMPRESA FORMADORA:"
               value1={form.empresaFormadora}
-              onChange1={(t) => setValue("empresaFormadora", t)}
               label2="NIVEL:"
               value2={form.nivel}
-              onChange2={(t) => setValue("nivel", t)}
             />
 
-            <Row
+            <StaticRow
               label1="ESTUDIANTE:"
               value1={form.estudiante}
-              onChange1={(t) => setValue("estudiante", t)}
               label2="CICLO ACADÉMICO:"
               value2={form.cicloAcademico}
-              onChange2={(t) => setValue("cicloAcademico", t)}
             />
 
-            <Row
+            <StaticRow
               label1="CÉDULA:"
               value1={form.cedula}
-              onChange1={(t) => setValue("cedula", t)}
               label2="F. INICIO / F. FIN:"
               value2={`${form.fechaInicio} / ${form.fechaFin}`}
-              onChange2={() => {}}
             />
 
-            <Row
+            <StaticRow
               label1="TUTOR(A) ACADÉMICO:"
               value1={form.tutorAcademico}
-              onChange1={(t) => setValue("tutorAcademico", t)}
               label2="NÚCLEO ESTRUCTURANTE:"
               value2={form.nucleoEstructurante}
-              onChange2={(t) => setValue("nucleoEstructurante", t)}
             />
 
-            <Row
+            <StaticRow
               label1="TUTOR(A) EMPRESARIAL:"
               value1={form.tutorEmpresarial}
-              onChange1={(t) => setValue("tutorEmpresarial", t)}
               label2="CARRERA:"
               value2={form.carrera}
-              onChange2={(t) => setValue("carrera", t)}
             />
           </View>
 
           <Section title="OBJETIVO DEL NÚCLEO ESTRUCTURANTE PARA LA FASE PRÁCTICA" />
 
-          <TextInput
-            style={styles.objectiveInput}
-            multiline
-            value={form.objetivo}
-            onChangeText={(text) => setValue("objetivo", text)}
-          />
+          <View style={styles.objectiveBox}>
+            <Text style={styles.staticText}>{form.objetivo}</Text>
+          </View>
 
           <Section title="INFORME DE APRENDIZAJE DE LA FASE PRÁCTICA" />
 
@@ -348,8 +315,8 @@ export default function InformeAprendizajeScreen() {
             <TextInput
               style={styles.footerInput}
               multiline
-              value={form.reflexion}
-              onChangeText={(text) => setValue("reflexion", text)}
+              value={reflexion}
+              onChangeText={setReflexion}
             />
 
             <View style={styles.footerLabel}>
@@ -361,8 +328,8 @@ export default function InformeAprendizajeScreen() {
             <TextInput
               style={styles.footerInput}
               multiline
-              value={form.observaciones}
-              onChangeText={(text) => setValue("observaciones", text)}
+              value={observaciones}
+              onChangeText={setObservaciones}
             />
           </View>
 
@@ -375,13 +342,11 @@ export default function InformeAprendizajeScreen() {
   );
 }
 
-function Row(props: {
+function StaticRow(props: {
   label1: string;
   value1: string;
-  onChange1: (text: string) => void;
   label2: string;
   value2: string;
-  onChange2: (text: string) => void;
 }) {
   return (
     <View style={styles.infoRow}>
@@ -389,21 +354,17 @@ function Row(props: {
         <Text style={styles.labelText}>{props.label1}</Text>
       </View>
 
-      <TextInput
-        style={styles.inputCell}
-        value={props.value1}
-        onChangeText={props.onChange1}
-      />
+      <View style={styles.staticCell}>
+        <Text style={styles.staticText}>{props.value1}</Text>
+      </View>
 
       <View style={styles.labelCell}>
         <Text style={styles.labelText}>{props.label2}</Text>
       </View>
 
-      <TextInput
-        style={styles.inputCell}
-        value={props.value2}
-        onChangeText={props.onChange2}
-      />
+      <View style={styles.staticCell}>
+        <Text style={styles.staticText}>{props.value2}</Text>
+      </View>
     </View>
   );
 }
@@ -504,12 +465,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "bold",
   },
-  inputCell: {
+  staticCell: {
     width: 400,
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#000",
+    justifyContent: "center",
     paddingHorizontal: 5,
+  },
+  staticText: {
     fontSize: 10,
   },
   sectionTitle: {
@@ -524,14 +488,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
-  objectiveInput: {
+  objectiveBox: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#000",
     minHeight: 50,
-    textAlign: "center",
-    fontSize: 11,
+    justifyContent: "center",
     padding: 8,
   },
   table: {

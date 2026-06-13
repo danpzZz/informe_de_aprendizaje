@@ -1,14 +1,14 @@
 const API_URL = "http://localhost:3000";
 
-export const obtenerDatosInicialesInforme = async () => {
-  const response = await fetch(`${API_URL}/informes/datos-iniciales/2`);
+// export const obtenerDatosInicialesInforme = async () => {
+//   const response = await fetch(`${API_URL}/informes/datos-iniciales/2`);
 
-  if (!response.ok) {
-    throw new Error("Error al obtener los datos del informe");
-  }
+//   if (!response.ok) {
+//     throw new Error("Error al obtener los datos del informe");
+//   }
 
-  return response.json();
-};
+//   return response.json();
+// };
 
 export const obtenerLearningLogs = async () => {
   const response = await fetch(`${API_URL}/informes/learning-logs/2`);
